@@ -3,6 +3,8 @@ using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Contracts;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +12,7 @@ namespace AuctionService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuctionsController(AuctionDbContext _context, IMapper _mapper) : ControllerBase
+public class AuctionsController(AuctionDbContext _context, IMapper _mapper, IPublishEndpoint _publishEndPoint) : ControllerBase
 {
 	[HttpGet]
 	public async Task<ActionResult<List<AuctionDto>>> GetAllAuctions(string date)
@@ -43,13 +45,18 @@ public class AuctionsController(AuctionDbContext _context, IMapper _mapper) : Co
 
 		auction.Seller = "test";
 		_context.Auctions.Add(auction);
-		var result = await _context.SaveChangesAsync();
 
-		if(result == 0) return BadRequest("Could not save changes to the DB");
+		var newAuction = _mapper.Map<AuctionDto>(auction); 
+
+		await _publishEndPoint.Publish(_mapper.Map<AuctionCreated>(newAuction));
+
+		var result = await _context.SaveChangesAsync() > 0;
+
+		if(!result) return BadRequest("Could not save changes to the DB");
 
 		return CreatedAtAction(	nameof(GetAuctionById), 
 													 	new {auction.Id}, 
-														_mapper.Map<AuctionDto>(auction));
+														newAuction );
 	}
 
 	[HttpPut("{id}")]
@@ -61,7 +68,7 @@ public class AuctionsController(AuctionDbContext _context, IMapper _mapper) : Co
 		if (auction == null) return NotFound();
 
 		// TODO: check seller == username
-
+		
 		auction.Item.Make = updateAuctionDto.Make ?? auction.Item.Make;
 		auction.Item.Model = updateAuctionDto.Make ?? auction.Item.Make;
 		auction.Item.Color = updateAuctionDto.Make ?? auction.Item.Make;
@@ -85,6 +92,8 @@ public class AuctionsController(AuctionDbContext _context, IMapper _mapper) : Co
 		// TODO: check seller == username
 
 		_context.Auctions.Remove(auction);
+
+		await _publishEndPoint.Publish<AuctionDeleted>(_mapper.Map<AuctionUpdated>(new { Id= auction.Id.ToString()}));
 
 		var result = await _context.SaveChangesAsync() > 0;
 
