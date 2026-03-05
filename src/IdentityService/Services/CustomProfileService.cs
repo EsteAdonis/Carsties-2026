@@ -23,6 +23,7 @@ public class CustomProfileService(UserManager<ApplicationUser> userManager) : IP
 
 		context.IssuedClaims.AddRange(claims);
 		context.IssuedClaims.Add(existingClaims.FirstOrDefault(x => x.Type == JwtClaimTypes.Name)!);
+		Console.WriteLine($"User name: {user?.UserName!} called");
 	}
 
 	public Task IsActiveAsync(IsActiveContext context)

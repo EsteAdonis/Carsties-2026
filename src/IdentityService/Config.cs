@@ -18,7 +18,7 @@ public static class Config
 			};
 
 	public static IEnumerable<Client> Clients =>
-				// interactive client using code flow + pkce
+				// interactive client using code flow
 			new Client[]			
 			{
 				new Client
@@ -28,8 +28,19 @@ public static class Config
 					AllowedScopes = { "openid", "profile", "auctionApp" },
 					RedirectUris = { "https://www.getpostman.com/oauth2/callback" },
 					ClientSecrets = [new Secret("NotASecret".Sha256())],
-					AllowedGrantTypes = GrantTypes.ResourceOwnerPassword ,
-					RequirePkce = true,					
+					AllowedGrantTypes = GrantTypes.ResourceOwnerPassword
+				},
+				new Client
+				{
+					ClientId = "nextApp",
+					ClientName = "nextApp",
+					ClientSecrets = [new Secret("secret".Sha256())],
+					AllowedGrantTypes = GrantTypes.CodeAndClientCredentials,
+					RequirePkce = true,
+					RedirectUris = { "http://localhost:3000/api/auth/callback/id-server" },
+					AllowOfflineAccess = true,
+					AllowedScopes = { "openid", "profile", "auctionApp" },
+					AccessTokenLifetime = 3600*24*30
 				}
 	};
 }
